@@ -10,16 +10,21 @@
 
 <body>
 
-<h1>📅 Panel Profesional de Turnos</h1>
+<h1>📅Turnos Dulzura mía</h1>
 
 <div style="width:85%; margin:10px auto; display:flex; gap:12px; flex-wrap:wrap; align-items:center; justify-content:center;">
     <button onclick="generar()">🔄 Generar Semana</button>
 
     <input id="nombreSemana" type="text" placeholder="Nombre de la semana" style="flex:1; min-width:240px; padding:10px; border:1px solid #ddd; border-radius:6px;" />
 
-    <button type="button" onclick="descargarTurno()" style="background:#007bff;">
-        ⬇️ Descargar turno
+    <!-- <button type="button" onclick="descargarTurno()" style="background:#007bff;">
+        ⬇️ Descargar turno (TXT)
+    </button> -->
+
+    <button type="button" onclick="descargarTurnoJPG()" style="background:#17a2b8;">
+        🖼️ Descargar turno (JPG)
     </button>
+
 </div>
 
 
@@ -73,6 +78,7 @@
 <script src="{{ url_for('static', filename='conflict_rules.js') }}"></script>
 <script src="{{ url_for('static', filename='app.js') }}"></script>
 <script src="{{ url_for('static', filename='download.js') }}"></script>
+<script src="{{ url_for('static', filename='download_image.js') }}"></script>
 
 
 

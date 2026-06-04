@@ -92,7 +92,7 @@ def generar():
     dias_descanso = dias_laborables[:5]
 
     # ✅ BLOQUE DE DÍAS (AQUÍ CONFIGURAS)
-    DIAS_SIN_DESCANSO = [0]  # 0=Lunes, cambia aquí
+    DIAS_SIN_DESCANSO = []  # 0=Lunes, cambia aquí
 
     # ✅ FILTRAR DÍAS VÁLIDOS
     dias_validos = [d for d in dias_descanso if d.weekday() not in DIAS_SIN_DESCANSO]
