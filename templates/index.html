@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Panel de Turnos</title>
+
+    <!-- Estilos -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+
+<body>
+
+<h1>📅 Panel Profesional de Turnos</h1>
+
+<div style="width:85%; margin:10px auto; display:flex; gap:12px; flex-wrap:wrap; align-items:center; justify-content:center;">
+    <button onclick="generar()">🔄 Generar Semana</button>
+
+    <input id="nombreSemana" type="text" placeholder="Nombre de la semana" style="flex:1; min-width:240px; padding:10px; border:1px solid #ddd; border-radius:6px;" />
+
+    <button type="button" onclick="descargarTurno()" style="background:#007bff;">
+        ⬇️ Descargar turno
+    </button>
+</div>
+
+
+<section style="width:85%; margin: 0 auto; text-align:left; background:#fff; padding:12px; border-radius:8px; box-shadow:0px 2px 10px rgba(0,0,0,0.06);">
+    <h3 style="margin:0 0 10px 0;">🚫 Restricciones de “no trabajar juntos”</h3>
+    <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
+        <div>
+            <label>Empleado 1</label><br/>
+            <select id="emp1" style="min-width:180px;">
+                <option value="Mile">Mile</option>
+                <option value="Eli">Eli</option>
+                <option value="Juli">Juli</option>
+                <option value="May">May</option>
+                <option value="Reemplazo">Reemplazo</option>
+            </select>
+        </div>
+        <div>
+            <label>Empleado 2</label><br/>
+            <select id="emp2" style="min-width:180px;">
+                <option value="Mile">Mile</option>
+                <option value="Eli">Eli</option>
+                <option value="Juli">Juli</option>
+                <option value="May">May</option>
+                <option value="Reemplazo">Reemplazo</option>
+            </select>
+        </div>
+        <button type="button" onclick="agregarRestriccion()" style="margin:0;">➕ Agregar restricción</button>
+    </div>
+
+    <div style="margin-top:10px;">
+        <label>Restricciones actuales</label>
+        <ul id="restriccionesList" style="margin:8px 0 0 18px;"></ul>
+    </div>
+</section>
+
+<table>
+
+    <thead>
+        <tr>
+            <th>Día</th>
+
+            <th>Turno A</th>
+            <th>Turno B</th>
+            <th>Descanso</th>
+        </tr>
+    </thead>
+    <tbody id="tabla"></tbody>
+</table>
+
+<!-- Script -->
+<script src="{{ url_for('static', filename='conflict_rules.js') }}"></script>
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+<script src="{{ url_for('static', filename='download.js') }}"></script>
+
+
+
+</body>
+</html>
