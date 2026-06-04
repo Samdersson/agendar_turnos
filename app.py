@@ -3,24 +3,18 @@ import os
 import sqlite3
 import random
 from datetime import date, timedelta
+import time
 
 app = Flask(__name__)
-
-
 
 def get_db():
     db_path = os.path.join(os.path.dirname(__file__), "turnos.db")
     return sqlite3.connect(db_path)
 
 
-# ✅ Página principal (abre index.html)
 @app.route("/")
 def index():
     return render_template("index.html")
-
-
-# ✅ Generar turnos automáticamente
-from flask import request
 
 
 @app.route("/generar", methods=["POST", "GET"])
@@ -29,20 +23,18 @@ def generar():
     db = get_db()
     cursor = db.cursor()
 
-    # Restricciones enviadas desde el front (pares que NO deben trabajar juntos)
+    # Restricciones desde frontend
     conflict_pairs = []
     if request.method == 'POST':
         payload = request.get_json(silent=True) or {}
         conflict_pairs = payload.get('conflictPairs', []) or []
 
-    # Normalizar
     normalized_conflicts = set()
     for pair in conflict_pairs:
         a = (pair.get('a') or '').strip()
         b = (pair.get('b') or '').strip()
         if a and b and a != b:
             normalized_conflicts.add(tuple(sorted([a, b])))
-
 
     # limpiar tablas
     cursor.execute("DELETE FROM personas")
@@ -54,17 +46,10 @@ def generar():
     titulares = ["Mile", "Eli", "Juli", "May"]
     backup = ["Reemplazo"]
 
-    # Regla de descansos:
-    # - Cada titular tiene como máximo 1 descanso por semana.
-    # - Descansos solo de lunes a viernes.
-    # - Sábados y domingos: nadie descansa.
-
-    descanso_usado = {}  # se completa después
     for p in titulares:
         cursor.execute("INSERT INTO personas (nombre, rol) VALUES (?, 'titular')", (p,))
     for p in backup:
         cursor.execute("INSERT INTO personas (nombre, rol) VALUES (?, 'backup')", (p,))
-
 
     db.commit()
 
@@ -74,20 +59,9 @@ def generar():
     titulares_db = [p for p in personas if p[2] == 'titular']
     backup_db = [p for p in personas if p[2] == 'backup'][0]
 
-    descanso_usado = {p[0]: False for p in titulares_db}
-
     inicio = date.today()
-    base = inicio.toordinal()
-
-    def nombres_personas(personas_list):
-        # personas_list: [(id,nombre,rol), ...]
-        return [p[1] for p in personas_list]
 
     def valida_conflictos(turno_A, turno_B):
-        # Restricción (modo B según confirmación):
-        # No pueden trabajar juntos dentro del mismo turno,
-        # o sea, no puede existir un par prohibido dentro de Turno A (entre sí)
-        # ni dentro de Turno B (entre sí). 
         nombres_A = [p[1] for p in turno_A]
         nombres_B = [p[1] for p in turno_B]
 
@@ -101,40 +75,63 @@ def generar():
 
         return not (tiene_conflicto(nombres_A) or tiene_conflicto(nombres_B))
 
+    # 🔹 Generar días laborales
+    dias_laborables = [
+        inicio + timedelta(days=d)
+        for d in range(7)
+        if (inicio + timedelta(days=d)).weekday() < 5
+    ]
+
+    dias_laborables = sorted(dias_laborables)
+
+    while len(dias_laborables) < 4:
+        proximo = dias_laborables[-1] + timedelta(days=1)
+        if proximo.weekday() < 5:
+            dias_laborables.append(proximo)
+
+    dias_descanso = dias_laborables[:5]
+
+    # ✅ BLOQUE DE DÍAS (AQUÍ CONFIGURAS)
+    DIAS_SIN_DESCANSO = [0]  # 0=Lunes, cambia aquí
+
+    # ✅ FILTRAR DÍAS VÁLIDOS
+    dias_validos = [d for d in dias_descanso if d.weekday() not in DIAS_SIN_DESCANSO]
+    dias_validos = sorted(dias_validos)
+
+    # ✅ VALIDACIÓN
+    if len(dias_validos) < len(titulares_db):
+        raise Exception("No hay suficientes días disponibles para descansos")
+
+    # ✅ ROTACIÓN REAL (siempre cambia)
+    offset = int(time.time()) % len(titulares_db)
+    titulares_rotados = titulares_db[offset:] + titulares_db[:offset]
+
+    # ✅ ASIGNAR DESCANSOS
+    descansos_semana = {}
+
+    for i, titular in enumerate(titulares_rotados):
+        descansos_semana[titular[0]] = dias_validos[i]
+
+    # 🔹 GENERAR SEMANA
     for i in range(7):
         dia = inicio + timedelta(days=i)
-
         descanso = None
 
-        # 👉 descanso lunes a viernes (máx 1 por empleado en la semana)
-        # Se rota usando el índice del día (i), así los descansos se reparten entre Lunes..Viernes.
-        # Nota: si ya se usó el titular que toca, se toma el siguiente disponible.
         if dia.weekday() < 5:
-            idx = (base + i) % len(titulares_db)
-            candidato = titulares_db[idx]
+            for pid, d_desc in descansos_semana.items():
+                if d_desc == dia:
+                    descanso = next(p for p in titulares_db if p[0] == pid)
+                    break
 
-            if descanso_usado.get(candidato[0], False):
-                # buscar el siguiente titular disponible respetando la rotación
-                for j in range(len(titulares_db)):
-                    alt = titulares_db[(idx + j) % len(titulares_db)]
-                    if not descanso_usado.get(alt[0], False):
-                        candidato = alt
-                        break
-
-            descanso = candidato
-            descanso_usado[descanso[0]] = True
-
+        if descanso:
             cursor.execute(
                 "INSERT INTO descansos (fecha, persona_id) VALUES (?, ?)",
                 (dia, descanso[0])
             )
 
-
-
-        # 👉 trabajadores activos
+        # trabajadores activos
         trabajadores = [p for p in titulares_db if p != descanso]
 
-        # 👉 entra backup si alguien descansa
         if descanso:
             trabajadores.append(backup_db)
 
@@ -143,26 +140,23 @@ def generar():
                 (dia, descanso[0], backup_db[0])
             )
 
-        # Asignar turnos evitando conflictos (reintentos con shuffle)
+        # asignar turnos
         ok = False
         for _ in range(200):
-            
-            trabajadores = trabajadores[:]
-            random.shuffle(trabajadores)
+            temp = trabajadores[:]
+            random.shuffle(temp)
 
-            turno_A = trabajadores[:2]
-            turno_B = trabajadores[2:]
+            turno_A = temp[:2]
+            turno_B = temp[2:]
 
             if valida_conflictos(turno_A, turno_B):
                 ok = True
                 break
 
         if not ok:
-            # Si no se puede cumplir por restricciones extremas, igual asignamos la última mezcla
-            turno_A = trabajadores[:2]
-            turno_B = trabajadores[2:]
+            turno_A = temp[:2]
+            turno_B = temp[2:]
 
-        # guardar turnos
         for p in turno_A:
             cursor.execute(
                 "INSERT INTO turnos (fecha, tipo, persona_id) VALUES (?, 'A', ?)",
@@ -179,8 +173,6 @@ def generar():
     return {"mensaje": "✅ Turnos generados"}
 
 
-
-# ✅ Obtener agenda
 @app.route("/agenda")
 def agenda():
 
@@ -214,12 +206,15 @@ def agenda():
         6: "Domingo",
     }
 
-    # organizar datos
     for f, tipo, nombre in turnos:
         if f not in resultado:
-            # f viene como string 'YYYY-MM-DD'
             dt = date.fromisoformat(str(f))
-            resultado[f] = {"A": [], "B": [], "descanso": "", "diaSemana": dias_semana[dt.weekday()]}
+            resultado[f] = {
+                "A": [],
+                "B": [],
+                "descanso": "",
+                "diaSemana": dias_semana[dt.weekday()]
+            }
 
         resultado[f][tipo].append(nombre)
 
@@ -230,6 +225,5 @@ def agenda():
     return jsonify(resultado)
 
 
-# ✅ ejecutar app
 if __name__ == "__main__":
     app.run(debug=True)
