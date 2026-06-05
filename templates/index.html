@@ -15,6 +15,18 @@
 <div style="width:85%; margin:10px auto; display:flex; gap:12px; flex-wrap:wrap; align-items:center; justify-content:center;">
     <button onclick="generar()">🔄 Generar Semana</button>
 
+    <div style="display:flex; flex-direction:column; gap:6px;">
+        <label style="font-size:14px;">Día sin descanso</label>
+        <select id="noDescansoDia" style="padding:10px; border:1px solid #ddd; border-radius:6px;">
+            <option value="0">Lunes</option>
+            <option value="1">Martes</option>
+            <option value="2">Miércoles</option>
+            <option value="3">Jueves</option>
+            <option value="4">Viernes</option>
+        </select>
+    </div>
+
+
     <input id="nombreSemana" type="text" placeholder="Nombre de la semana" style="flex:1; min-width:240px; padding:10px; border:1px solid #ddd; border-radius:6px;" />
 
     <!-- <button type="button" onclick="descargarTurno()" style="background:#007bff;">
@@ -66,8 +78,8 @@
         <tr>
             <th>Día</th>
 
-            <th>Turno A</th>
-            <th>Turno B</th>
+            <th>Mañana</th>
+            <th>Tarde</th>
             <th>Descanso</th>
         </tr>
     </thead>

@@ -43,8 +43,8 @@ def generar():
     cursor.execute("DELETE FROM reemplazos")
 
     # datos base
-    titulares = ["Mile", "Eli", "Juli", "May"]
-    backup = ["Reemplazo"]
+    titulares = ["Mile", "Eli", "Juli", "May",]
+    backup = ["Dai"]
 
     for p in titulares:
         cursor.execute("INSERT INTO personas (nombre, rol) VALUES (?, 'titular')", (p,))
@@ -91,12 +91,25 @@ def generar():
 
     dias_descanso = dias_laborables[:5]
 
-    # ✅ BLOQUE DE DÍAS (AQUÍ CONFIGURAS)
-    DIAS_SIN_DESCANSO = []  # 0=Lunes, cambia aquí
+    # ✅ BLOQUE DE DÍAS (configurado desde el front)
+    # noDescansoWeekdays: lista de weekday() a los que NO se les puede asignar descanso.
+    # 0=Lunes, 1=Martes, ... 4=Viernes
+    no_descanso_weekdays = payload.get('noDescansoWeekdays', [0]) or [0]
+
+    # normalizar y asegurar rango esperado
+    try:
+        no_descanso_weekdays = sorted({int(x) for x in no_descanso_weekdays})
+    except Exception:
+        no_descanso_weekdays = [0]
+
+    no_descanso_weekdays = [x for x in no_descanso_weekdays if 0 <= x <= 4]
+    if not no_descanso_weekdays:
+        no_descanso_weekdays = [0]
 
     # ✅ FILTRAR DÍAS VÁLIDOS
-    dias_validos = [d for d in dias_descanso if d.weekday() not in DIAS_SIN_DESCANSO]
+    dias_validos = [d for d in dias_descanso if d.weekday() not in no_descanso_weekdays]
     dias_validos = sorted(dias_validos)
+
 
     # ✅ VALIDACIÓN
     if len(dias_validos) < len(titulares_db):

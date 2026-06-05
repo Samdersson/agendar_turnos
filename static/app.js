@@ -32,10 +32,16 @@ function renderRestricciones() {
 function generar() {
     const pares = window.ConflictRules?.getConflictPairs?.() || [];
 
+    const noDescansoDiaSel = document.getElementById('noDescansoDia');
+    const noDescansoDia = noDescansoDiaSel ? parseInt(noDescansoDiaSel.value, 10) : 0;
+
     fetch("/generar", {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ conflictPairs: pares })
+        body: JSON.stringify({
+            conflictPairs: pares,
+            noDescansoWeekdays: [noDescansoDia]
+        })
     })
         .then(res => res.json())
         .then(data => {
@@ -43,6 +49,7 @@ function generar() {
             cargar();
         });
 }
+
 
 
 // ✅ Cargar datos en la tabla
