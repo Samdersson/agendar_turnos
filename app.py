@@ -43,8 +43,8 @@ def generar():
     cursor.execute("DELETE FROM reemplazos")
 
     # datos base
-    titulares = ["Mile", "Eli", "Juli", "May",]
-    backup = ["Dai"]
+    titulares = ["Mile", "Dai", "Juli", "May",]
+    backup = ["Michi"]
 
     for p in titulares:
         cursor.execute("INSERT INTO personas (nombre, rol) VALUES (?, 'titular')", (p,))

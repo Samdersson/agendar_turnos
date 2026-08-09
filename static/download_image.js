@@ -116,8 +116,8 @@ function descargarTurnoJPG() {
   const headerY = marginTop + 20 + headerH / 2;
 
   ctx.fillText('Día', xDia + 18, headerY);
-  ctx.fillText('Turno A', xA + 18, headerY);
-  ctx.fillText('Turno B', xB + 18, headerY);
+  ctx.fillText('Mañana', xA + 18, headerY);
+  ctx.fillText('Tarde', xB + 18, headerY);
   ctx.fillText('Descanso', xDesc + 18, headerY);
 
   ctx.textBaseline = 'alphabetic';
@@ -189,5 +189,149 @@ function descargarTurnoJPG() {
 }
 
 window.descargarTurnoJPG = descargarTurnoJPG;
+
+function descargarTurnoPDF() {
+  const { nombreSemana, datos } = getTablaDatos();
+
+  const nombreArchivo = (nombreSemana || 'turno')
+    .trim()
+    .replace(/[^a-z0-9\-\_ ]/gi, '')
+    .replace(/\s+/g, '_')
+    .slice(0, 40);
+
+  const width = 1400;
+  const paddingX = 70;
+  const headerH = 80;
+  const rowH = 98;
+  const marginTop = 140;
+
+  const height = marginTop + headerH + datos.length * rowH + 80;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+
+  // Fondo
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, width, height);
+
+  // Título
+  ctx.fillStyle = '#111';
+  ctx.font = 'bold 38px Arial';
+  ctx.fillText(`Turnos Dulzura mía`, paddingX, 55);
+
+  ctx.font = 'bold 28px Arial';
+  ctx.fillStyle = '#0b5ed7';
+  ctx.fillText(`Semana: ${nombreSemana || '(sin nombre)'}`, paddingX, 95);
+
+  // Cols
+  const colWidths = {
+    dia: 190,
+    A: 420,
+    B: 420,
+    descanso: width - (paddingX * 2 + 190 + 420 + 420),
+  };
+
+  const xDia = paddingX;
+  const xA = xDia + colWidths.dia;
+  const xB = xA + colWidths.A;
+  const xDesc = xB + colWidths.B;
+
+  const tableLeft = paddingX;
+  const tableRight = width - paddingX;
+
+  // Header bar
+  ctx.fillStyle = '#343a40';
+  ctx.fillRect(tableLeft, marginTop + 20, tableRight - tableLeft, headerH);
+
+  // Header text
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 26px Arial';
+
+  ctx.textBaseline = 'middle';
+  const headerY = marginTop + 20 + headerH / 2;
+
+  ctx.fillText('Día', xDia + 18, headerY);
+  ctx.fillText('Mañana', xA + 18, headerY);
+  ctx.fillText('Tarde', xB + 18, headerY);
+  ctx.fillText('Descanso', xDesc + 18, headerY);
+
+  ctx.textBaseline = 'alphabetic';
+
+  // Borde general
+  ctx.strokeStyle = '#d0d7de';
+  ctx.lineWidth = 2;
+
+  for (let i = 0; i < datos.length; i++) {
+    const y = marginTop + 20 + headerH + i * rowH;
+
+    ctx.fillStyle = i % 2 === 0 ? '#f8f9fa' : '#ffffff';
+    ctx.fillRect(tableLeft, y, tableRight - tableLeft, rowH);
+
+    ctx.strokeRect(tableLeft, y, tableRight - tableLeft, rowH);
+
+    // vertical separators
+    ctx.beginPath();
+    ctx.moveTo(xA, y);
+    ctx.lineTo(xA, y + rowH);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(xB, y);
+    ctx.lineTo(xB, y + rowH);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(xDesc, y);
+    ctx.lineTo(xDesc, y + rowH);
+    ctx.stroke();
+
+    // Texto
+    ctx.fillStyle = '#111';
+    ctx.font = 'bold 24px Arial';
+    ctx.fillText(datos[i].dia, xDia + 18, y + 34);
+
+    ctx.fillStyle = '#0b5ed7';
+    ctx.font = 'bold 22px Arial';
+    wrapText(ctx, datos[i].turnoA, xA + 18, y + 32, colWidths.A - 36, 28, 3);
+
+    ctx.fillStyle = '#fd7e14';
+    ctx.font = 'bold 22px Arial';
+    wrapText(ctx, datos[i].turnoB, xB + 18, y + 32, colWidths.B - 36, 28, 3);
+
+    ctx.fillStyle = '#6c757d';
+    ctx.font = 'italic 22px Arial';
+    wrapText(ctx, datos[i].descanso || '-', xDesc + 18, y + 32, colWidths.descanso - 36, 28, 3);
+  }
+
+  // Canvas -> PDF
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({
+    orientation: 'p',
+    unit: 'pt',
+    format: 'a4',
+  });
+
+  const imgData = canvas.toDataURL('image/png');
+
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
+
+  const imgWidth = pageWidth;
+  const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+  // Si es más alta que la página, quedará cortado (igual que 1 sola página).
+  // Si quieres multi-página lo implemento.
+  pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+  pdf.save(`${nombreArchivo}.pdf`);
+}
+
+window.descargarTurnoPDF = descargarTurnoPDF;
+
+
+
 
 

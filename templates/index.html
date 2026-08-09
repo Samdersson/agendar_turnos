@@ -37,6 +37,11 @@
         🖼️ Descargar turno (JPG)
     </button>
 
+    <button type="button" onclick="descargarTurnoPDF()" style="background:#28a745;">
+        📄 Descargar turno (PDF)
+    </button>
+
+
 </div>
 
 
@@ -87,11 +92,11 @@
 </table>
 
 <!-- Script -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="{{ url_for('static', filename='conflict_rules.js') }}"></script>
 <script src="{{ url_for('static', filename='app.js') }}"></script>
 <script src="{{ url_for('static', filename='download.js') }}"></script>
 <script src="{{ url_for('static', filename='download_image.js') }}"></script>
-
 
 
 </body>

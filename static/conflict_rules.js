@@ -8,8 +8,8 @@ function normalizeName(s) {
 }
 
 function setConflictPairs(pairs) {
-  // pairs: [{a:"Mile", b:"Eli"}, ...]
-  conflictPairs = (pairs || [])
+  // PArejas conflicto: [{a:"Mile", b:"Eli"}, ...]
+  conflictPairs = (pairs || []) //Recibe parametros de front
     .map(p => ({
       a: normalizeName(p.a),
       b: normalizeName(p.b)
