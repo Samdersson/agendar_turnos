@@ -49,10 +49,31 @@ function wrapText(ctx, text, x, y, maxWidth, lineHeight, maxLines = 3) {
   }
 }
 
-function descargarTurnoJPG() {
+function guardarTurnosEnBD() {
   const { nombreSemana, datos } = getTablaDatos();
 
-  const nombreArchivo = (nombreSemana || 'turno')
+  return fetch("/guardar_turnos", {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tabla: datos })
+  })
+    .then(res => res.json())
+    .then(data => {
+      console.log('Turnos guardados:', data);
+      return data;
+    })
+    .catch(err => {
+      console.error('Error al guardar turnos:', err);
+      return null;
+    });
+}
+
+function descargarTurnoJPG() {
+  // Primero guardar la tabla actual en la base de datos
+  guardarTurnosEnBD().finally(() => {
+    const { nombreSemana, datos } = getTablaDatos();
+
+    const nombreArchivo = (nombreSemana || 'turno')
     .trim()
     .replace(/[^a-z0-9\-\_ ]/gi, '')
     .replace(/\s+/g, '_')
@@ -185,7 +206,8 @@ function descargarTurnoJPG() {
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
-  }, 'image/jpeg', 0.92);
+}, 'image/jpeg', 0.92);
+  }); // fin del .finally()
 }
 
 window.descargarTurnoJPG = descargarTurnoJPG;

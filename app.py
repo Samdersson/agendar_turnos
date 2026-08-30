@@ -44,7 +44,7 @@ def generar():
 
     # datos base
     titulares = ["Mile", "Dai", "Juli", "May",]
-    backup = ["Michi"]
+    backup = ["Ale"]
 
     for p in titulares:
         cursor.execute("INSERT INTO personas (nombre, rol) VALUES (?, 'titular')", (p,))
@@ -236,6 +236,103 @@ def agenda():
             resultado[f]["descanso"] = nombre
 
     return jsonify(resultado)
+
+
+@app.route("/guardar_turnos", methods=["POST"])
+def guardar_turnos():
+    """Guarda los turnos de la tabla (posiblemente editados) en la base de datos."""
+    db = get_db()
+    cursor = db.cursor()
+
+    payload = request.get_json(silent=True) or {}
+    filas = payload.get('tabla', []) or []
+
+    if not filas:
+        return {"mensaje": "⚠️ No hay datos para guardar", "filas": 0}
+
+    # Mapeo de nombre de día a weekday (0=Lunes ... 6=Domingo)
+    dias_semana = {
+        "Lunes": 0,
+        "Martes": 1,
+        "Miércoles": 2,
+        "Jueves": 3,
+        "Viernes": 4,
+        "Sábado": 5,
+        "Domingo": 6,
+    }
+
+    hoy = date.today()
+    # Lunes de la semana actual
+    lunes = hoy - timedelta(days=hoy.weekday())
+
+    # Limpiar datos existentes de la semana actual
+    cursor.execute("DELETE FROM turnos WHERE fecha >= ?", (lunes.isoformat(),))
+    cursor.execute("DELETE FROM descansos WHERE fecha >= ?", (lunes.isoformat(),))
+    cursor.execute("DELETE FROM reemplazos WHERE fecha >= ?", (lunes.isoformat(),))
+
+    # Cargar personas existentes
+    cursor.execute("SELECT id, nombre, rol FROM personas")
+    personas = cursor.fetchall()
+    persona_map = {p[1]: (p[0], p[2]) for p in personas}
+
+    def get_persona_id(nombre):
+        nombre = (nombre or '').strip()
+        if not nombre:
+            return None
+        if nombre in persona_map:
+            return persona_map[nombre][0]
+        # Crear persona nueva si no existe
+        cursor.execute("INSERT INTO personas (nombre, rol) VALUES (?, 'titular')", (nombre,))
+        pid = cursor.lastrowid
+        persona_map[nombre] = (pid, 'titular')
+        return pid
+
+    filas_guardadas = 0
+
+    for fila in filas:
+        dia_nombre = (fila.get('dia') or '').strip()
+        turnoA = (fila.get('turnoA') or '').strip()
+        turnoB = (fila.get('turnoB') or '').strip()
+        descanso = (fila.get('descanso') or '').strip()
+
+        if dia_nombre not in dias_semana:
+            continue
+
+        # Calcular la fecha real de este día (en la semana actual)
+        weekday = dias_semana[dia_nombre]
+        fecha_dia = lunes + timedelta(days=weekday)
+
+        # Insertar turno A
+        for nombre in [n.strip() for n in turnoA.split(',') if n.strip()]:
+            pid = get_persona_id(nombre)
+            if pid:
+                cursor.execute(
+                    "INSERT INTO turnos (fecha, tipo, persona_id) VALUES (?, 'A', ?)",
+                    (fecha_dia.isoformat(), pid)
+                )
+                filas_guardadas += 1
+
+        # Insertar turno B
+        for nombre in [n.strip() for n in turnoB.split(',') if n.strip()]:
+            pid = get_persona_id(nombre)
+            if pid:
+                cursor.execute(
+                    "INSERT INTO turnos (fecha, tipo, persona_id) VALUES (?, 'B', ?)",
+                    (fecha_dia.isoformat(), pid)
+                )
+                filas_guardadas += 1
+
+        # Insertar descanso
+        if descanso and descanso != '-':
+            pid = get_persona_id(descanso)
+            if pid:
+                cursor.execute(
+                    "INSERT INTO descansos (fecha, persona_id) VALUES (?, ?)",
+                    (fecha_dia.isoformat(), pid)
+                )
+
+    db.commit()
+    return {"mensaje": "✅ Turnos guardados en la base de datos", "filas": filas_guardadas}
 
 
 if __name__ == "__main__":
